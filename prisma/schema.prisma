@@ -1,0 +1,319 @@
+// HVAC AHU Configuration & Pricing System
+// Prisma Schema — Phase 1
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────────────── ENUMS ────────────────────────────
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  QUOTED
+  APPROVED
+  CANCELLED
+}
+
+enum ArrangementType {
+  SUPPLY_ONLY
+  RETURN_ONLY
+  SUPPLY_RETURN
+  MAU
+  EXHAUST
+}
+
+enum SectionType {
+  FRESH_AIR_INTAKE
+  RETURN_AIR_INTAKE
+  MIXING_BOX
+  EMPTY_ACCESS
+  FILTER
+  COOLING_COIL
+  HEATING_COIL
+  FAN
+  SILENCER
+  HEAT_RECOVERY
+  HUMIDIFIER
+  UV
+  DAMPER
+  DISCHARGE_PLENUM
+}
+
+enum ValidationStatus {
+  PENDING
+  VALID
+  WARNING
+  INVALID
+}
+
+enum CatalogItemType {
+  COMPONENT
+  ACCESSORY
+  MATERIAL
+  SERVICE
+}
+
+enum PricingFormulaType {
+  FIXED
+  FACTOR
+  FORMULA
+  LOOKUP
+}
+
+enum PricingTargetType {
+  UNIT
+  SECTION
+  COMPONENT
+  ACCESSORY
+}
+
+enum ValidationSeverity {
+  ERROR
+  WARNING
+  INFO
+}
+
+enum ValidationTargetType {
+  UNIT
+  SECTION
+  SECTION_SEQUENCE
+  COMPONENT_SELECTION
+}
+
+enum AccessoryTriggerType {
+  SECTION_TYPE
+  COMPONENT_TYPE
+  ARRANGEMENT_TYPE
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum IndoorOutdoor {
+  INDOOR
+  OUTDOOR
+}
+
+enum ServiceSide {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+enum AirflowUnit {
+  CMH
+  CFM
+  M3S
+}
+
+// ──────────────────────────── CORE ────────────────────────────
+
+model Project {
+  id           String        @id @default(cuid())
+  customerName String
+  projectName  String
+  quoteNumber  String?       @unique
+  currency     String        @default("USD")
+  status       ProjectStatus @default(DRAFT)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  units  Unit[]
+  quotes Quote[]
+
+  @@map("projects")
+}
+
+model Unit {
+  id                     String          @id @default(cuid())
+  projectId              String
+  unitName               String
+  arrangementType        ArrangementType
+  airflow                Decimal?        @db.Decimal(10, 2)
+  airflowUnit            AirflowUnit     @default(CMH)
+  indoorOutdoor          IndoorOutdoor   @default(INDOOR)
+  width                  Decimal?        @db.Decimal(8, 2)
+  height                 Decimal?        @db.Decimal(8, 2)
+  casingConstructionType String?
+  panelThickness         Decimal?        @db.Decimal(6, 2)
+  insulationType         String?
+  baseFrameType          String?
+  serviceSide            ServiceSide?
+  accessLevel            String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sections Section[]
+
+  @@map("units")
+}
+
+model Section {
+  id                    String           @id @default(cuid())
+  unitId                String
+  sequenceNumber        Int
+  sectionType           SectionType
+  sectionName           String?
+  width                 Decimal?         @db.Decimal(8, 2)
+  height                Decimal?         @db.Decimal(8, 2)
+  length                Decimal?         @db.Decimal(8, 2)
+  serviceAccessRequired Boolean          @default(false)
+  drainPanRequired      Boolean          @default(false)
+  validationStatus      ValidationStatus @default(PENDING)
+  metadataJson          Json?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  unit                Unit                        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  componentSelections SectionComponentSelection[]
+
+  @@unique([unitId, sequenceNumber])
+  @@map("sections")
+}
+
+model SectionComponentSelection {
+  id                String   @id @default(cuid())
+  sectionId         String
+  catalogItemId     String
+  quantity          Int      @default(1)
+  selectionRole     String?
+  configurationJson Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  section     Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  catalogItem CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@map("section_component_selections")
+}
+
+// ──────────────────────────── CATALOG ────────────────────────────
+
+model CatalogCategory {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items CatalogItem[]
+
+  @@map("catalog_categories")
+}
+
+model CatalogItem {
+  id              String          @id @default(cuid())
+  categoryId      String
+  itemCode        String          @unique
+  name            String
+  itemType        CatalogItemType
+  manufacturer    String?
+  description     String?
+  defaultUnitCost Decimal?        @db.Decimal(12, 4)
+  unitOfMeasure   String?
+  isActive        Boolean         @default(true)
+  attributesJson  Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  category            CatalogCategory             @relation(fields: [categoryId], references: [id])
+  componentSelections SectionComponentSelection[]
+
+  @@map("catalog_items")
+}
+
+model SectionTemplate {
+  id                    String           @id @default(cuid())
+  code                  String           @unique
+  name                  String
+  sectionType           SectionType
+  arrangementType       ArrangementType?
+  defaultsJson          Json?
+  allowedComponentsJson Json?
+  isActive              Boolean          @default(true)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@map("section_templates")
+}
+
+// ──────────────────────────── RULES ────────────────────────────
+
+model PricingRule {
+  id                    String             @id @default(cuid())
+  code                  String             @unique
+  name                  String
+  targetType            PricingTargetType
+  targetKey             String?
+  formulaType           PricingFormulaType
+  formulaDefinitionJson Json
+  priority              Int                @default(0)
+  isActive              Boolean            @default(true)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@map("pricing_rules")
+}
+
+model ValidationRule {
+  id            String               @id @default(cuid())
+  code          String               @unique
+  name          String
+  severity      ValidationSeverity
+  targetType    ValidationTargetType
+  targetKey     String?
+  conditionJson Json?
+  message       String
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@map("validation_rules")
+}
+
+model AccessoryRule {
+  id                      String               @id @default(cuid())
+  code                    String               @unique
+  name                    String
+  triggerType             AccessoryTriggerType
+  triggerKey              String
+  accessoryDefinitionJson Json
+  isRequired              Boolean              @default(false)
+  isActive                Boolean              @default(true)
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+
+  @@map("accessory_rules")
+}
+
+// ──────────────────────────── COMMERCIAL ────────────────────────────
+
+model Quote {
+  id            String      @id @default(cuid())
+  projectId     String
+  versionNumber Int         @default(1)
+  status        QuoteStatus @default(DRAFT)
+  subtotalCost  Decimal?    @db.Decimal(14, 4)
+  sellPrice     Decimal?    @db.Decimal(14, 4)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, versionNumber])
+  @@map("quotes")
+}
