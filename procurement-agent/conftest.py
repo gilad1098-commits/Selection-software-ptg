@@ -68,6 +68,25 @@ def _make_azure_stubs() -> None:
     functions.HttpResponse = MagicMock  # type: ignore[attr-defined]
 
 
+def _make_slack_stubs() -> None:
+    """Insert lightweight slack_sdk stub modules into sys.modules."""
+
+    def _mod(name: str) -> types.ModuleType:
+        m = types.ModuleType(name)
+        sys.modules[name] = m
+        return m
+
+    slack_sdk = _mod("slack_sdk")
+    web = _mod("slack_sdk.web")
+    slack_sdk.web = web  # type: ignore[attr-defined]
+    async_client = _mod("slack_sdk.web.async_client")
+    web.async_client = async_client  # type: ignore[attr-defined]
+    async_client.AsyncWebClient = MagicMock  # replaced per-test as needed
+
+
 # Only stub when the real packages are absent
 if "azure" not in sys.modules:
     _make_azure_stubs()
+
+if "slack_sdk" not in sys.modules:
+    _make_slack_stubs()

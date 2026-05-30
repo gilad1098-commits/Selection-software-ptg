@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from agent.draft_generator import generate_engineer_report, generate_followup_draft
+from agent.engineer_response_manager import EngineerResponseManager
 from agent.models import Action, ActionType, RFQRecord
 from agent.state_manager import StateManager
 from config.settings import settings
@@ -20,6 +21,7 @@ class ActionExecutor:
         self._slack = SlackClient()
         self._priority = PriorityClient()
         self._state = StateManager()
+        self._eng_responses = EngineerResponseManager()
 
     async def execute(self, actions: list[Action], rfq: RFQRecord) -> None:
         for action in actions:
@@ -77,15 +79,29 @@ class ActionExecutor:
 
         # Fetch thread for summary (empty list is safe — generator handles it)
         summary = await generate_engineer_report(rfq, [])
+        requires_action = "Review supplier response and confirm technical specs"
 
+        slack_message_ts = ""
         if engineer_slack_id:
-            await self._slack.send_engineer_dm(
+            # Create a pending EngineerResponse record first so we have a response_id
+            # to embed in the button values (placeholder ts; updated after Slack responds)
+            pending = await self._eng_responses.create_pending(
+                rfq_id=rfq.rfq_id,
+                engineer_name=engineer_name,
+                slack_message_ts="",
+            )
+
+            slack_message_ts = await self._slack.send_engineer_notification(
                 engineer_slack_id=engineer_slack_id,
                 rfq_id=rfq.rfq_id,
+                response_id=pending.response_id,
                 supplier_name=rfq.supplier_name,
                 summary=summary,
-                requires_action="Review supplier response and confirm technical specs",
+                requires_action=requires_action,
             )
+
+            # Store the real Slack ts in the record
+            await self._eng_responses.update_slack_ts(pending.response_id, slack_message_ts)
 
         await self._graph.send_internal_email(
             to=engineer_email,

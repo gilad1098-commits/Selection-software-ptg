@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # Slack
     SLACK_BOT_TOKEN: str = ""
     SLACK_SIGNING_SECRET: str = ""
+    SLACK_WEBHOOK_URL: str = ""  # The URL Slack will POST button clicks to
 
     # Priority ERP
     PRIORITY_BASE_URL: str = ""

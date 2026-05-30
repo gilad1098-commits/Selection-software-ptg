@@ -64,6 +64,25 @@ class EmailClassification(BaseModel):
     summary: str = ""
 
 
+class EngineerAction(str, Enum):
+    APPROVED = "approved"
+    NEEDS_INFO = "needs_info"
+    REJECTED = "rejected"
+
+
+class EngineerResponse(BaseModel):
+    response_id: str
+    rfq_id: str
+    engineer_name: str
+    action: Optional[EngineerAction] = None
+    slack_message_ts: str
+    responded_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    notes: str = ""
+
+    model_config = {"use_enum_values": True}
+
+
 class ApprovalStatus(str, Enum):
     PENDING = "pending"
     SENT = "sent"
