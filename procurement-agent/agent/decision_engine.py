@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from agent.models import Action, ActionType, RFQRecord, RFQStatus
 from config.rules import (
+    DISCUSSION_SILENCE_DAYS,
     ENGINEER_NO_REPLY_DAYS,
     MAX_FOLLOWUPS,
     SUPPLIER_NO_REPLY_DAYS,
@@ -33,6 +34,34 @@ def decide_action(rfq: RFQRecord) -> list[Action]:
                 rfq_id=rfq.rfq_id,
                 requires_approval=True,
                 metadata={"followup_number": rfq.followup_count + 1},
+            ))
+
+    # Rule for TECHNICAL_DISCUSSION: only follow up if silent for 5+ days
+    if rfq.status == RFQStatus.TECHNICAL_DISCUSSION:
+        days_since_activity = (
+            (now - rfq.last_activity_at).days
+            if rfq.last_activity_at else (now - rfq.sent_at).days
+        )
+        if days_since_activity >= DISCUSSION_SILENCE_DAYS:
+            actions.append(Action(
+                type=ActionType.DRAFT_SUPPLIER_FOLLOWUP,
+                rfq_id=rfq.rfq_id,
+                requires_approval=True,
+                metadata={"followup_type": "discussion_checkin", "followup_number": rfq.followup_count + 1},
+            ))
+
+    # Rule for AWAITING_QUOTE: same as AWAITING_REPLY but for post-discussion quote wait
+    if rfq.status == RFQStatus.AWAITING_QUOTE:
+        days_since_last = (
+            (now - rfq.last_supplier_reply).days
+            if rfq.last_supplier_reply else (now - rfq.sent_at).days
+        )
+        if days_since_last >= SUPPLIER_NO_REPLY_DAYS and rfq.followup_count < MAX_FOLLOWUPS:
+            actions.append(Action(
+                type=ActionType.DRAFT_SUPPLIER_FOLLOWUP,
+                rfq_id=rfq.rfq_id,
+                requires_approval=True,
+                metadata={"followup_type": "quote_reminder", "followup_number": rfq.followup_count + 1},
             ))
 
     # Rule 2: Supplier replied → notify engineer (auto-send)

@@ -45,7 +45,8 @@ class ActionExecutor:
 
     async def _draft_supplier_followup(self, action: Action, rfq: RFQRecord) -> None:
         followup_number = action.metadata.get("followup_number", rfq.followup_count + 1)
-        body = await generate_followup_draft(rfq, followup_number)
+        followup_type = action.metadata.get("followup_type", "standard")
+        body = await generate_followup_draft(rfq, followup_number, followup_type=followup_type)
         subject = f"Re: {rfq.subject}"
 
         draft_id = await self._graph.create_draft(rfq.supplier_email, subject, body)
@@ -76,6 +77,7 @@ class ActionExecutor:
         engineer_name = next(iter(engineer_map))
         engineer_email = engineer_map[engineer_name]
         engineer_slack_id = slack_map.get(engineer_name)
+        engineer_label = settings.engineer_role_label.get(engineer_name, engineer_name)
 
         # Fetch thread for summary (empty list is safe — generator handles it)
         summary = await generate_engineer_report(rfq, [])
@@ -114,13 +116,15 @@ class ActionExecutor:
         from agent.models import RFQStatus
         rfq.status = RFQStatus.ENGINEER_REVIEW
         await self._state.upsert(rfq)
-        logger.info("Engineer %s notified for RFQ %s", engineer_name, rfq.rfq_id)
+        logger.info("Engineer %s (%s) notified for RFQ %s", engineer_name, engineer_label, rfq.rfq_id)
 
     async def _engineer_reminder(self, action: Action, rfq: RFQRecord) -> None:
         engineer_map = settings.engineer_email_map
         slack_map = settings.engineer_slack_map
-        engineer_email = engineer_map.get(rfq.engineer_assigned or "")
-        engineer_slack_id = slack_map.get(rfq.engineer_assigned or "")
+        assigned = rfq.engineer_assigned or ""
+        engineer_email = engineer_map.get(assigned)
+        engineer_slack_id = slack_map.get(assigned)
+        engineer_label = settings.engineer_role_label.get(assigned, assigned)
 
         if engineer_slack_id:
             await self._slack.send_engineer_dm(
@@ -137,7 +141,7 @@ class ActionExecutor:
                 subject=f"[Reminder] RFQ Review Pending — {rfq.subject}",
                 body=f"This is a reminder that RFQ #{rfq.rfq_id} from {rfq.supplier_name} is still awaiting your review.",
             )
-        logger.info("Engineer reminder sent for RFQ %s", rfq.rfq_id)
+        logger.info("Engineer reminder sent for RFQ %s (assigned: %s / %s)", rfq.rfq_id, assigned, engineer_label)
 
     async def _update_priority(self, action: Action, rfq: RFQRecord) -> None:
         if not rfq.po_number or not rfq.delivery_date:

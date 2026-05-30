@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 class RFQStatus(str, Enum):
     SENT = "sent"
     AWAITING_REPLY = "awaiting_reply"
+    TECHNICAL_DISCUSSION = "technical_discussion"   # Active back-and-forth with supplier
+    AWAITING_QUOTE = "awaiting_quote"               # Tech resolved, waiting for price
     SUPPLIER_REPLIED = "supplier_replied"
     ENGINEER_REVIEW = "engineer_review"
     APPROVED = "approved"
@@ -50,6 +52,8 @@ class RFQRecord(BaseModel):
     delivery_date: Optional[date] = None
     po_number: Optional[str] = None
     notes: str = ""
+    last_activity_at: Optional[datetime] = None   # Last any email in thread (either direction)
+    discussion_message_count: int = 0             # Count of back-and-forth messages in current discussion
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

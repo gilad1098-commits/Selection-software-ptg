@@ -111,8 +111,8 @@ class SlackClient:
     ) -> None:
         """Replaces the buttons with a confirmation after engineer clicks."""
         action_labels = {
-            EngineerAction.APPROVED: "✅ אישרת — טיוטה נשלחה ל-Becky",
-            EngineerAction.NEEDS_INFO: "❓ ביקשת מידע נוסף מ-Becky",
+            EngineerAction.APPROVED: "✅ אישרת — טיוטה נשלחה לרכש",
+            EngineerAction.NEEDS_INFO: "❓ ביקשת מידע נוסף מהרכש",
             EngineerAction.REJECTED: "❌ דחית את הבקשה",
         }
         # Normalise: EngineerAction enum members or plain string values both work

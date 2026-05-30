@@ -16,7 +16,11 @@
     "PRIORITY_USER": "",
     "PRIORITY_PASSWORD": "",
     "SHAREPOINT_BASE_URL": "https://company.sharepoint.com/sites/procurement",
-    "ENGINEER_EMAIL_MAP": "{\"Denis\": \"denis@company.com\", \"Dmitri\": \"dmitri@company.com\"}",
-    "ENGINEER_SLACK_MAP": "{\"Denis\": \"U012AB345\", \"Dmitri\": \"U067CD890\"}"
+    "PROCUREMENT_EMAIL": "procurement@company.com",
+    "PROCUREMENT_NAME": "Procurement Team",
+    "ENGINEER_EMAIL_MAP": "{\"ENGINEER_1\": \"engineer1@company.com\", \"ENGINEER_2\": \"engineer2@company.com\"}",
+    "ENGINEER_SLACK_MAP": "{\"ENGINEER_1\": \"U012AB345\", \"ENGINEER_2\": \"U067CD890\"}",
+    "ENGINEER_ROLE_LABEL": "{\"ENGINEER_1\": \"Lead Engineer\", \"ENGINEER_2\": \"Systems Engineer\"}",
+    "DISCUSSION_SILENCE_DAYS": "5"
   }
 }

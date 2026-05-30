@@ -165,3 +165,95 @@ async def test_classify_raises_on_invalid_json():
             await classify_email(
                 subject="test", body="test body", sender="x@example.com"
             )
+
+
+# ---------------------------------------------------------------------------
+# Sample 4: Technical discussion — ongoing back-and-forth
+# ---------------------------------------------------------------------------
+
+TECH_DISCUSSION_EMAIL = {
+    "subject": "Re: RFQ-2024-0044 — Custom Bearing Assembly",
+    "sender": "tech@bearing-specialists.com",
+    "body": (
+        "Hi,\n\n"
+        "Following up on your question about the load rating — as we discussed, "
+        "the standard grade handles up to 12 kN radial load. "
+        "To clarify from our last exchange, the temperature range you specified (up to 180°C) "
+        "will require the ceramic variant we mentioned. "
+        "Could you confirm whether the shaft diameter we discussed (42mm) is still the target?\n\n"
+        "Best,\nBearing Specialists Tech Team"
+    ),
+}
+
+TECH_DISCUSSION_EXPECTED = {
+    "classification": "technical_discussion",
+    "supplier_name": "Bearing Specialists",
+    "delivery_date": None,
+    "requires_engineer": True,
+    "summary": "Supplier is continuing the technical discussion, confirming specs and asking a follow-up question about shaft diameter.",
+}
+
+
+# ---------------------------------------------------------------------------
+# Sample 5: Discussion concluded — supplier says quote is coming
+# ---------------------------------------------------------------------------
+
+DISCUSSION_CONCLUDED_EMAIL = {
+    "subject": "Re: RFQ-2024-0044 — Custom Bearing Assembly",
+    "sender": "tech@bearing-specialists.com",
+    "body": (
+        "Hi,\n\n"
+        "We now have all the technical information we need from your side. "
+        "Technically we can meet your requirements with the ceramic variant. "
+        "I'll prepare the pricing now and send the formal quote by end of week.\n\n"
+        "Best,\nBearing Specialists"
+    ),
+}
+
+DISCUSSION_CONCLUDED_EXPECTED = {
+    "classification": "discussion_concluded",
+    "supplier_name": "Bearing Specialists",
+    "delivery_date": None,
+    "requires_engineer": False,
+    "summary": "Supplier has all needed info and will send the quote by end of week.",
+}
+
+
+# ---------------------------------------------------------------------------
+# New classification tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_classify_technical_discussion():
+    """Email referencing prior specs exchange is classified as technical_discussion."""
+    with patch("agent.classifier._get_client") as mock_get_client:
+        mock_client = MagicMock()
+        mock_client.messages.create = AsyncMock(
+            return_value=_mock_response(TECH_DISCUSSION_EXPECTED)
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await classify_email(**TECH_DISCUSSION_EMAIL)
+
+    assert isinstance(result, EmailClassification)
+    assert result.classification == "technical_discussion"
+    assert result.requires_engineer is True
+    assert result.supplier_name == "Bearing Specialists"
+
+
+@pytest.mark.asyncio
+async def test_classify_discussion_concluded():
+    """Email saying 'quote coming shortly' is classified as discussion_concluded."""
+    with patch("agent.classifier._get_client") as mock_get_client:
+        mock_client = MagicMock()
+        mock_client.messages.create = AsyncMock(
+            return_value=_mock_response(DISCUSSION_CONCLUDED_EXPECTED)
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await classify_email(**DISCUSSION_CONCLUDED_EMAIL)
+
+    assert isinstance(result, EmailClassification)
+    assert result.classification == "discussion_concluded"
+    assert result.supplier_name == "Bearing Specialists"
+    assert result.delivery_date is None

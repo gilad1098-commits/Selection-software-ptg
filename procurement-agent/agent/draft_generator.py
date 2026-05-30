@@ -19,8 +19,54 @@ def _get_client() -> AsyncAnthropic:
     return _client
 
 
-async def generate_followup_draft(rfq: RFQRecord, followup_number: int) -> str:
-    prompt = f"""You are a professional procurement assistant.
+async def generate_followup_draft(
+    rfq: RFQRecord,
+    followup_number: int,
+    followup_type: str = "standard",  # "standard" | "discussion_checkin" | "quote_reminder"
+) -> str:
+    if followup_type == "discussion_checkin":
+        prompt = f"""You are a professional procurement assistant.
+Write a polite check-in email to a supplier after a technical discussion has gone quiet.
+
+RFQ Details:
+- Supplier: {rfq.supplier_name}
+- Subject: {rfq.subject}
+- Follow-up number: {followup_number}
+
+We've been having a productive technical discussion about {rfq.subject}. \
+Just checking in to see if you need any further information from our side, \
+or if you have an update on timing for the quote.
+
+Rules:
+- Professional but friendly tone
+- Reference the ongoing technical discussion
+- Keep it under 5 sentences
+- Sign as "{settings.PROCUREMENT_NAME}"
+
+Return only the email body text, no subject line."""
+
+    elif followup_type == "quote_reminder":
+        prompt = f"""You are a professional procurement assistant.
+Write a polite follow-up email reminding a supplier to send a quote after a technical discussion.
+
+RFQ Details:
+- Supplier: {rfq.supplier_name}
+- Subject: {rfq.subject}
+- Follow-up number: {followup_number}
+
+Following our recent technical discussion about {rfq.subject}, we wanted to follow up on the quote. \
+Could you please let us know when we can expect to receive it?
+
+Rules:
+- Professional but friendly tone
+- Reference the concluded technical discussion
+- Keep it under 5 sentences
+- Sign as "{settings.PROCUREMENT_NAME}"
+
+Return only the email body text, no subject line."""
+
+    else:
+        prompt = f"""You are a professional procurement assistant.
 Write a polite follow-up email to a supplier who has not responded to our RFQ.
 
 RFQ Details:
@@ -35,7 +81,7 @@ Rules:
 - Ask for confirmation of receipt OR a timeline for their quote
 - Keep it under 5 sentences
 - Do NOT mention urgency aggressively on first follow-up
-- Sign as "Procurement Team"
+- Sign as "{settings.PROCUREMENT_NAME}"
 
 Return only the email body text, no subject line."""
 

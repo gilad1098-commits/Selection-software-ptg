@@ -38,7 +38,7 @@ def _from_entity(entity: dict) -> RFQRecord:
 
     for field in ("sent_at", "last_supplier_reply", "last_followup_sent",
                   "engineer_notified_at", "engineer_responded_at",
-                  "created_at", "updated_at"):
+                  "last_activity_at", "created_at", "updated_at"):
         raw = data.get(field)
         if raw:
             data[field] = datetime.fromisoformat(raw)
@@ -60,6 +60,7 @@ def _from_entity(entity: dict) -> RFQRecord:
 
     data.setdefault("followup_count", 0)
     data.setdefault("priority_updated", False)
+    data.setdefault("discussion_message_count", 0)
     return RFQRecord(**data)
 
 
@@ -136,6 +137,20 @@ class StateManager:
             if classification.delivery_date:
                 from datetime import date
                 rfq.delivery_date = date.fromisoformat(classification.delivery_date)
+
+        elif cls == "technical_discussion":
+            rfq.status = RFQStatus.TECHNICAL_DISCUSSION
+            now = datetime.now(timezone.utc)
+            rfq.last_supplier_reply = now
+            rfq.last_activity_at = now
+            rfq.discussion_message_count += 1
+
+        elif cls == "discussion_concluded":
+            rfq.status = RFQStatus.AWAITING_QUOTE
+            now = datetime.now(timezone.utc)
+            rfq.last_supplier_reply = now
+            rfq.last_activity_at = now
+            rfq.discussion_message_count = 0  # reset for next round
 
         elif cls == "supplier_acknowledgment":
             rfq.last_supplier_reply = datetime.now(timezone.utc)

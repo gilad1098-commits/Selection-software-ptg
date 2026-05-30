@@ -11,6 +11,7 @@ import pytest
 from agent.decision_engine import decide_action
 from agent.models import Action, ActionType, RFQRecord, RFQStatus
 from config.rules import (
+    DISCUSSION_SILENCE_DAYS,
     ENGINEER_NO_REPLY_DAYS,
     MAX_FOLLOWUPS,
     SUPPLIER_NO_REPLY_DAYS,
@@ -246,3 +247,85 @@ def test_no_actions_for_fresh_awaiting_rfq():
     actions = decide_action(rfq)
 
     assert actions == []
+
+
+# ---------------------------------------------------------------------------
+# TECHNICAL_DISCUSSION rules
+# ---------------------------------------------------------------------------
+
+def test_technical_discussion_silent_5_days_triggers_checkin():
+    """TECHNICAL_DISCUSSION with 5+ days of silence → DRAFT_SUPPLIER_FOLLOWUP (discussion_checkin)."""
+    now = datetime.now(timezone.utc)
+    last_activity = now - timedelta(days=DISCUSSION_SILENCE_DAYS + 1)
+    rfq = _base_rfq(
+        status=RFQStatus.TECHNICAL_DISCUSSION,
+        sent_at=now - timedelta(days=10),
+        last_activity_at=last_activity,
+        followup_count=0,
+    )
+
+    actions = decide_action(rfq)
+
+    followup_actions = [a for a in actions if a.type == ActionType.DRAFT_SUPPLIER_FOLLOWUP]
+    assert len(followup_actions) == 1
+    assert followup_actions[0].requires_approval is True
+    assert followup_actions[0].metadata["followup_type"] == "discussion_checkin"
+    assert followup_actions[0].metadata["followup_number"] == 1
+
+
+def test_technical_discussion_silent_2_days_no_action():
+    """TECHNICAL_DISCUSSION with only 2 days of silence → no action (below DISCUSSION_SILENCE_DAYS)."""
+    now = datetime.now(timezone.utc)
+    last_activity = now - timedelta(days=2)
+    rfq = _base_rfq(
+        status=RFQStatus.TECHNICAL_DISCUSSION,
+        sent_at=now - timedelta(days=10),
+        last_activity_at=last_activity,
+        followup_count=0,
+    )
+
+    actions = decide_action(rfq)
+
+    followup_actions = [a for a in actions if a.type == ActionType.DRAFT_SUPPLIER_FOLLOWUP]
+    assert followup_actions == []
+
+
+# ---------------------------------------------------------------------------
+# AWAITING_QUOTE rules
+# ---------------------------------------------------------------------------
+
+def test_awaiting_quote_3_days_triggers_reminder():
+    """AWAITING_QUOTE with 3+ days since last reply → DRAFT_SUPPLIER_FOLLOWUP (quote_reminder)."""
+    now = datetime.now(timezone.utc)
+    last_reply = now - timedelta(days=SUPPLIER_NO_REPLY_DAYS + 1)
+    rfq = _base_rfq(
+        status=RFQStatus.AWAITING_QUOTE,
+        sent_at=now - timedelta(days=10),
+        last_supplier_reply=last_reply,
+        followup_count=0,
+    )
+
+    actions = decide_action(rfq)
+
+    followup_actions = [a for a in actions if a.type == ActionType.DRAFT_SUPPLIER_FOLLOWUP]
+    assert len(followup_actions) == 1
+    assert followup_actions[0].requires_approval is True
+    assert followup_actions[0].metadata["followup_type"] == "quote_reminder"
+    assert followup_actions[0].metadata["followup_number"] == 1
+
+
+def test_awaiting_quote_1_day_no_action():
+    """AWAITING_QUOTE with only 1 day since last reply → no action (below threshold)."""
+    now = datetime.now(timezone.utc)
+    last_reply = now - timedelta(days=1)
+    rfq = _base_rfq(
+        status=RFQStatus.AWAITING_QUOTE,
+        sent_at=now - timedelta(days=10),
+        last_supplier_reply=last_reply,
+        followup_count=0,
+    )
+
+    actions = decide_action(rfq)
+
+    followup_actions = [a for a in actions if a.type == ActionType.DRAFT_SUPPLIER_FOLLOWUP]
+    assert followup_actions == []

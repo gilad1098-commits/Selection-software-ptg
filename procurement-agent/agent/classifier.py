@@ -16,7 +16,9 @@ You are a procurement email classifier. Analyze the email and return JSON only.
 Classify into one of:
 - rfq_sent: We sent an RFQ to a supplier
 - supplier_quote_received: Supplier sent back a quote or price
-- supplier_question: Supplier is asking a clarifying question
+- supplier_question: Supplier is asking ONE isolated question with no prior technical back-and-forth context
+- technical_discussion: This message is part of an ongoing technical back-and-forth — both sides have been going back and forth, the supplier is answering a question or asking a follow-up technical question. Key signals: references to previous messages, technical specs being refined, "as we discussed", "to clarify", "following up on your question about X"
+- discussion_concluded: Supplier signals the technical discussion is done and a price/quote is coming soon — e.g. "we have all the info we need, quote will follow", "I'll prepare the pricing now", "technically we can do this, sending quote shortly"
 - supplier_delivery_confirmed: Supplier confirmed a delivery date
 - supplier_acknowledgment: Supplier just confirmed receipt
 - engineer_response: An engineer replied about a technical query

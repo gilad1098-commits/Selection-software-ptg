@@ -38,9 +38,14 @@ class Settings(BaseSettings):
     # SharePoint
     SHAREPOINT_BASE_URL: str = ""
 
-    # Engineer mappings (JSON strings)
-    ENGINEER_EMAIL_MAP: str = '{"Denis": "denis@company.com", "Dmitri": "dmitri@company.com"}'
-    ENGINEER_SLACK_MAP: str = '{"Denis": "U012AB345", "Dmitri": "U067CD890"}'
+    # Procurement identity
+    PROCUREMENT_EMAIL: str = "procurement@company.com"
+    PROCUREMENT_NAME: str = "Procurement Team"
+
+    # Engineer mappings (JSON strings) — keys are role identifiers, not personal names
+    ENGINEER_EMAIL_MAP: str = '{"ENGINEER_1": "engineer1@company.com", "ENGINEER_2": "engineer2@company.com"}'
+    ENGINEER_SLACK_MAP: str = '{"ENGINEER_1": "U012AB345", "ENGINEER_2": "U067CD890"}'
+    ENGINEER_ROLE_LABEL: str = '{"ENGINEER_1": "Lead Engineer", "ENGINEER_2": "Systems Engineer"}'
 
     @property
     def engineer_email_map(self) -> dict[str, str]:
@@ -49,6 +54,10 @@ class Settings(BaseSettings):
     @property
     def engineer_slack_map(self) -> dict[str, str]:
         return json.loads(self.ENGINEER_SLACK_MAP)
+
+    @property
+    def engineer_role_label(self) -> dict[str, str]:
+        return json.loads(self.ENGINEER_ROLE_LABEL)
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
