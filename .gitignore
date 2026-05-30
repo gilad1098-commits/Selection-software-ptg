@@ -41,4 +41,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+local.settings.json
+
 /app/generated/prisma

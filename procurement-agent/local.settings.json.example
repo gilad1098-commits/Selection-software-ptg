@@ -1,0 +1,22 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AZURE_TENANT_ID": "",
+    "AZURE_CLIENT_ID": "",
+    "AZURE_CLIENT_SECRET": "",
+    "AZURE_STORAGE_CONNECTION_STRING": "",
+    "ANTHROPIC_API_KEY": "",
+    "USER_EMAIL": "procurement@company.com",
+    "RFQ_FOLDER_ID": "",
+    "SLACK_BOT_TOKEN": "",
+    "SLACK_SIGNING_SECRET": "",
+    "PRIORITY_BASE_URL": "https://your-priority-host/odata/Priority/COMPANY/test",
+    "PRIORITY_USER": "",
+    "PRIORITY_PASSWORD": "",
+    "SHAREPOINT_BASE_URL": "https://company.sharepoint.com/sites/procurement",
+    "ENGINEER_EMAIL_MAP": "{\"Denis\": \"denis@company.com\", \"Dmitri\": \"dmitri@company.com\"}",
+    "ENGINEER_SLACK_MAP": "{\"Denis\": \"U012AB345\", \"Dmitri\": \"U067CD890\"}"
+  }
+}
