@@ -62,3 +62,24 @@ class EmailClassification(BaseModel):
     delivery_date: Optional[str] = None
     requires_engineer: bool = False
     summary: str = ""
+
+
+class ApprovalStatus(str, Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    DISMISSED = "dismissed"
+    EXPIRED = "expired"
+
+
+class ApprovalRecord(BaseModel):
+    approval_id: str
+    rfq_id: str
+    draft_id: str
+    draft_body: str
+    followup_number: int
+    status: ApprovalStatus
+    created_at: datetime
+    expires_at: datetime
+    actioned_at: Optional[datetime] = None
+
+    model_config = {"use_enum_values": True}

@@ -1,0 +1,12 @@
+{
+  "scriptFile": "__init__.py",
+  "bindings": [
+    {
+      "name": "timer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 0 8 * * *",
+      "connection": "AZURE_SERVICE_BUS_CONNECTION"
+    }
+  ]
+}

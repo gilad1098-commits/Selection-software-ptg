@@ -1,0 +1,12 @@
+{
+  "scriptFile": "__init__.py",
+  "bindings": [
+    {
+      "name": "msg",
+      "type": "serviceBusTrigger",
+      "direction": "in",
+      "queueName": "rfq-emails",
+      "connection": "AZURE_SERVICE_BUS_CONNECTION"
+    }
+  ]
+}

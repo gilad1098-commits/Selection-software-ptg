@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     AZURE_CLIENT_SECRET: str = ""
     AZURE_STORAGE_CONNECTION_STRING: str = ""
     AZURE_TABLE_NAME: str = "rfqrecords"
+    AZURE_SERVICE_BUS_CONNECTION: str = ""
+
+    # Webhook
+    WEBHOOK_SECRET: str = ""
 
     # Anthropic
     ANTHROPIC_API_KEY: str = ""
