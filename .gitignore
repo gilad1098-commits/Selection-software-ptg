@@ -41,6 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Claude Code internals
+.claude/
+
 # python
 __pycache__/
 *.py[cod]
