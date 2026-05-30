@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+anthropic
+aiosqlite
+python-multipart
+python-dotenv
