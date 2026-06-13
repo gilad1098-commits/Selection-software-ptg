@@ -1,5 +1,5 @@
 // HVAC AHU Configuration & Pricing System
-// Prisma Schema — Phase 1
+// Prisma Schema — Phase 2
 
 generator client {
   provider = "prisma-client"
@@ -10,7 +10,7 @@ datasource db {
   provider = "postgresql"
 }
 
-// ──────────────────────────── ENUMS ────────────────────────────
+// ──────────────────────────────── ENUMS ────────────────────────────────
 
 enum ProjectStatus {
   DRAFT
@@ -111,13 +111,24 @@ enum ServiceSide {
   BOTH
 }
 
-enum AirflowUnit {
-  CMH
-  CFM
-  M3S
+enum CoilFluidType {
+  CHW
+  HW
+  STEAM
+  DX
 }
 
-// ──────────────────────────── CORE ────────────────────────────
+enum ConnectionSide {
+  LEFT
+  RIGHT
+}
+
+enum CoilHanding {
+  LEFT_HAND
+  RIGHT_HAND
+}
+
+// ──────────────────────────────── CORE ────────────────────────────────
 
 model Project {
   id           String        @id @default(cuid())
@@ -141,13 +152,12 @@ model Unit {
   projectId              String
   unitName               String
   arrangementType        ArrangementType
-  airflow                Decimal?        @db.Decimal(10, 2)
-  airflowUnit            AirflowUnit     @default(CMH)
+  airflowCfm             Decimal?        @db.Decimal(10, 2)
   indoorOutdoor          IndoorOutdoor   @default(INDOOR)
-  width                  Decimal?        @db.Decimal(8, 2)
-  height                 Decimal?        @db.Decimal(8, 2)
+  widthIn                Decimal?        @db.Decimal(8, 2)
+  heightIn               Decimal?        @db.Decimal(8, 2)
   casingConstructionType String?
-  panelThickness         Decimal?        @db.Decimal(6, 2)
+  panelThicknessIn       Decimal?        @db.Decimal(6, 2)
   insulationType         String?
   baseFrameType          String?
   serviceSide            ServiceSide?
@@ -155,8 +165,9 @@ model Unit {
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sections Section[]
+  project               Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sections              Section[]
+  coilSelectionRequests CoilSelectionRequest[]
 
   @@map("units")
 }
@@ -167,9 +178,9 @@ model Section {
   sequenceNumber        Int
   sectionType           SectionType
   sectionName           String?
-  width                 Decimal?         @db.Decimal(8, 2)
-  height                Decimal?         @db.Decimal(8, 2)
-  length                Decimal?         @db.Decimal(8, 2)
+  widthIn               Decimal?         @db.Decimal(8, 2)
+  heightIn              Decimal?         @db.Decimal(8, 2)
+  lengthIn              Decimal?         @db.Decimal(8, 2)
   serviceAccessRequired Boolean          @default(false)
   drainPanRequired      Boolean          @default(false)
   validationStatus      ValidationStatus @default(PENDING)
@@ -177,8 +188,9 @@ model Section {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
-  unit                Unit                        @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  componentSelections SectionComponentSelection[]
+  unit                  Unit                        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  componentSelections   SectionComponentSelection[]
+  coilSelectionRequests CoilSelectionRequest[]
 
   @@unique([unitId, sequenceNumber])
   @@map("sections")
@@ -200,7 +212,35 @@ model SectionComponentSelection {
   @@map("section_component_selections")
 }
 
-// ──────────────────────────── CATALOG ────────────────────────────
+model CoilSelectionRequest {
+  id               String         @id @default(cuid())
+  unitId           String
+  sectionId        String?
+  fluidType        CoilFluidType
+  airflowCfm       Decimal        @db.Decimal(10, 2)
+  widthIn          Decimal        @db.Decimal(8, 2)
+  heightIn         Decimal        @db.Decimal(8, 2)
+  faceAreaFt2      Decimal        @db.Decimal(10, 4)
+  faceVelocityFpm  Decimal        @db.Decimal(10, 2)
+  enteringAirTempF Decimal?       @db.Decimal(6, 2)
+  leavingAirTempF  Decimal?       @db.Decimal(6, 2)
+  enteringFluidTempF Decimal?     @db.Decimal(6, 2)
+  leavingFluidTempF  Decimal?     @db.Decimal(6, 2)
+  numberOfRows     Int?
+  finSpacing       Decimal?       @db.Decimal(6, 3)
+  connectionSide   ConnectionSide?
+  handing          CoilHanding?
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  unit    Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  section Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@map("coil_selection_requests")
+}
+
+// ──────────────────────────────── CATALOG ────────────────────────────────
 
 model CatalogCategory {
   id        String   @id @default(cuid())
@@ -250,7 +290,7 @@ model SectionTemplate {
   @@map("section_templates")
 }
 
-// ──────────────────────────── RULES ────────────────────────────
+// ──────────────────────────────── RULES ────────────────────────────────
 
 model PricingRule {
   id                    String             @id @default(cuid())
@@ -299,7 +339,7 @@ model AccessoryRule {
   @@map("accessory_rules")
 }
 
-// ──────────────────────────── COMMERCIAL ────────────────────────────
+// ──────────────────────────────── COMMERCIAL ────────────────────────────────
 
 model Quote {
   id            String      @id @default(cuid())
